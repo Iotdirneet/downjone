@@ -9,7 +9,8 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
-body:not(.light-theme)::before {
+/* Efecto CRT desactivado por defecto para TVs */
+body.crt-effect:not(.light-theme)::before {
     content: '';
     position: fixed;
     top: 0;
@@ -92,6 +93,10 @@ body.drinks-only .controls {
 
 body.drinks-only .container {
     padding: 10px;
+}
+
+body.drinks-only h1 {
+    margin-bottom: 10px;
 }
 
 body.drinks-only .drinks {

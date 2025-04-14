@@ -62,7 +62,7 @@
     <audio id="offer-sound" src="offer.mp3"></audio>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker error:', err));
         }
     </script>
     <script src="script.js"></script>

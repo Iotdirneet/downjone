@@ -5,10 +5,11 @@
 const config = {
     // Tiempos
     crashInterval: 300, // Segundos hasta el próximo crash (5 min = 300s)
+    updateInterval: 100, // Milisegundos entre actualizaciones (100ms)
     
-    // Porcentajes de fluctuación (en tiempo real)
-    priceFluctuation: { min: -0.002, max: 0.002 }, // ±0.2% por ~16ms
-    indexFluctuation: { min: -0.001, max: 0.001 }, // ±0.1% por ~16ms (modo Completo)
+    // Porcentajes de fluctuación
+    priceFluctuation: { min: -0.002, max: 0.002 }, // ±0.2% por actualización
+    indexFluctuation: { min: -0.001, max: 0.001 }, // ±0.1% por actualización
     
     // Descuentos
     discountProbability: 0.05, // Probabilidad de oferta (5%)
@@ -20,15 +21,16 @@ const config = {
     
     // Límites
     minPrice: 2, // Precio mínimo de bebida (€2)
-    minIndex: 500 // Índice mínimo (500)
+    minIndex: 500, // Índice mínimo (500)
+    
+    // Rendimiento
+    enableCRT: false // Activar efecto CRT (false para TVs)
 };
 
 /**
- * Lista de bebidas con precios iniciales y categorías.
- * Incluye íconos para visualización.
+ * Lista de bebidas con precios iniciales, categorías e íconos.
  */
 const drinks = [
-    // Cócteles
     { id: 1, name: "Mojito", price: 8, popularity: 0, category: "cocktails", prevPrice: 8, discount: false, icon: "icons/mojito.png" },
     { id: 2, name: "Caipirinha", price: 7, popularity: 0, category: "cocktails", prevPrice: 7, discount: false, icon: "icons/caipirinha.png" },
     { id: 3, name: "Gin Tonic", price: 9, popularity: 0, category: "cocktails", prevPrice: 9, discount: false, icon: "icons/gintonic.png" },
@@ -36,14 +38,12 @@ const drinks = [
     { id: 5, name: "Negroni", price: 10, popularity: 0, category: "cocktails", prevPrice: 10, discount: false, icon: "icons/negroni.png" },
     { id: 6, name: "Old Fashioned", price: 11, popularity: 0, category: "cocktails", prevPrice: 11, discount: false, icon: "icons/oldfashioned.png" },
     { id: 7, name: "Daiquiri", price: 8.5, popularity: 0, category: "cocktails", prevPrice: 8.5, discount: false, icon: "icons/daiquiri.png" },
-    // Cervezas
     { id: 8, name: "Cerveza Artesanal", price: 5, popularity: 0, category: "beers", prevPrice: 5, discount: false, icon: "icons/artesanal.png" },
     { id: 9, name: "IPA", price: 6, popularity: 0, category: "beers", prevPrice: 6, discount: false, icon: "icons/ipa.png" },
     { id: 10, name: "Lager", price: 4.5, popularity: 0, category: "beers", prevPrice: 4.5, discount: false, icon: "icons/lager.png" },
     { id: 11, name: "Stout", price: 6.5, popularity: 0, category: "beers", prevPrice: 6.5, discount: false, icon: "icons/stout.png" },
     { id: 12, name: "Pilsner", price: 5, popularity: 0, category: "beers", prevPrice: 5, discount: false, icon: "icons/pilsner.png" },
     { id: 13, name: "Weissbier", price: 5.5, popularity: 0, category: "beers", prevPrice: 5.5, discount: false, icon: "icons/weissbier.png" },
-    // Sin Alcohol
     { id: 14, name: "Limonada", price: 3, popularity: 0, category: "non-alcoholic", prevPrice: 3, discount: false, icon: "icons/limonada.png" },
     { id: 15, name: "Mojito Sin", price: 4, popularity: 0, category: "non-alcoholic", prevPrice: 4, discount: false, icon: "icons/mojitosin.png" },
     { id: 16, name: "Té Helado", price: 3.5, popularity: 0, category: "non-alcoholic", prevPrice: 3.5, discount: false, icon: "icons/tehelado.png" },
@@ -61,6 +61,7 @@ let crashTime = config.crashInterval;
 let soundEnabled = false;
 let isDrinksOnly = false;
 let lastNotification = 0;
+let lastUpdate = 0;
 
 /**
  * Elementos del DOM
@@ -112,6 +113,40 @@ const indexChart = new Chart(ctx, {
 });
 
 /**
+ * Sincroniza estado con localStorage.
+ */
+function syncState() {
+    const state = {
+        drinks: drinks.map(d => ({ id: d.id, price: d.price, prevPrice: d.prevPrice, discount: d.discount, popularity: d.popularity })),
+        index,
+        crashTime
+    };
+    localStorage.setItem('barDownJonesState', JSON.stringify(state));
+}
+
+/**
+ * Carga estado desde localStorage.
+ */
+function loadState() {
+    const state = localStorage.getItem('barDownJonesState');
+    if (state) {
+        const parsed = JSON.parse(state);
+        drinks.forEach(d => {
+            const saved = parsed.drinks.find(s => s.id === d.id);
+            if (saved) {
+                d.price = saved.price;
+                d.prevPrice = saved.prevPrice;
+                d.discount = saved.discount;
+                d.popularity = saved.popularity;
+            }
+        });
+        index = parsed.index;
+        crashTime = parsed.crashTime;
+        indexHistory = [index];
+    }
+}
+
+/**
  * Muestra una notificación en pantalla.
  * @param {string} message - Mensaje a mostrar.
  * @param {string} type - Tipo de notificación (info, success, error).
@@ -143,16 +178,29 @@ function updateDrinks() {
             else if (drink.category === 'beers') beersList.appendChild(drinkLi);
             else nonAlcoholicList.appendChild(drinkLi);
         }
-        drinkLi.classList.toggle('discount', drink.discount);
+        const currentPrice = drink.discount ? (drink.price * (1 - config.discountAmount)).toFixed(2) : drink.price.toFixed(2);
+        const currentDiscount = drink.discount;
+        const currentPopularity = drink.popularity;
         const arrowClass = drink.price > drink.prevPrice ? 'arrow-up' : drink.price < drink.prevPrice ? 'arrow-down' : '';
-        const displayPrice = drink.discount ? (drink.price * (1 - config.discountAmount)).toFixed(2) : drink.price.toFixed(2);
-        drinkLi.innerHTML = `
-            <span class="name"><img src="${drink.icon}" class="drink-icon" alt="${drink.name}">${drink.name}${drink.discount ? `<span class="discount-text"> (Oferta -${config.discountAmount * 100}%)</span>` : ''}</span>
-            <span class="price">€${displayPrice}</span>
-            <span class="popularity">${drink.popularity}</span>
-            <span class="price-change ${arrowClass}"></span>
-            ${isDrinksOnly ? '' : `<button onclick="addToCart(${drink.id})">Añadir</button>`}
-        `;
+
+        // Actualizar solo si hay cambios
+        if (
+            drinkLi.dataset.price !== currentPrice ||
+            drinkLi.dataset.discount !== currentDiscount.toString() ||
+            drinkLi.dataset.popularity !== currentPopularity.toString()
+        ) {
+            drinkLi.classList.toggle('discount', drink.discount);
+            drinkLi.innerHTML = `
+                <span class="name"><img src="${drink.icon}" class="drink-icon" alt="${drink.name}">${drink.name}${drink.discount ? `<span class="discount-text"> (Oferta -${config.discountAmount * 100}%)</span>` : ''}</span>
+                <span class="price">€${currentPrice}</span>
+                <span class="popularity">${drink.popularity}</span>
+                <span class="price-change ${arrowClass}"></span>
+                ${isDrinksOnly ? '' : `<button onclick="addToCart(${drink.id})">Añadir</button>`}
+            `;
+            drinkLi.dataset.price = currentPrice;
+            drinkLi.dataset.discount = currentDiscount;
+            drinkLi.dataset.popularity = currentPopularity;
+        }
     });
 }
 
@@ -168,6 +216,7 @@ function addToCart(drinkId) {
         cart.push(cartItem);
         updateCart();
         showNotification(`${drink.name} añadido al carrito`, 'success');
+        syncState();
     }
 }
 
@@ -220,6 +269,7 @@ buyButton.addEventListener('click', () => {
     updateCart();
     updateDrinks();
     updateTicker();
+    syncState();
 });
 
 /**
@@ -236,9 +286,13 @@ function updateHistory() {
 }
 
 /**
- * Simula fluctuaciones del mercado en tiempo real.
+ * Simula fluctuaciones del mercado.
  */
 function simulateMarket() {
+    const now = Date.now();
+    if (now - lastUpdate < config.updateInterval) return;
+    lastUpdate = now;
+
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
         const fluctuation = Math.random() * (config.priceFluctuation.max - config.priceFluctuation.min) + config.priceFluctuation.min;
@@ -257,6 +311,7 @@ function simulateMarket() {
     }
     updateDrinks();
     updateTicker();
+    syncState();
 }
 
 /**
@@ -284,6 +339,7 @@ function updateCrashTimer() {
         crashMarket();
         crashTime = config.crashInterval;
     }
+    syncState();
 }
 
 /**
@@ -305,21 +361,21 @@ function crashMarket() {
     }
     updateDrinks();
     updateTicker();
+    syncState();
 }
 
 /**
  * Actualiza el ticker con precios actuales.
  */
 function updateTicker() {
-    tickerContent.innerHTML = '';
-    drinks.forEach(drink => {
-        const span = document.createElement('span');
-        span.classList.add('ticker-item');
+    const currentContent = drinks.map(drink => {
         const arrowClass = drink.price > drink.prevPrice ? 'arrow-up' : drink.price < drink.prevPrice ? 'arrow-down' : '';
         const displayPrice = drink.discount ? (drink.price * (1 - config.discountAmount)).toFixed(2) : drink.price.toFixed(2);
-        span.innerHTML = `${drink.name}${drink.discount ? ` (-${config.discountAmount * 100}%)` : ''}: €${displayPrice} <span class="${arrowClass}"></span> | `;
-        tickerContent.appendChild(span);
-    });
+        return `<span class="ticker-item">${drink.name}${drink.discount ? ` (-${config.discountAmount * 100}%)` : ''}: €${displayPrice} <span class="${arrowClass}"></span> | </span>`;
+    }).join('');
+    if (tickerContent.innerHTML !== currentContent) {
+        tickerContent.innerHTML = currentContent;
+    }
 }
 
 /**
@@ -370,6 +426,10 @@ function toggleMode() {
         updateHistory();
         updateIndex();
     }
+    // Pantalla completa automática en modo Solo Bebidas (TV)
+    if (isDrinksOnly && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    }
 }
 
 /**
@@ -410,15 +470,16 @@ exportHistory.addEventListener('click', () => {
 });
 
 /**
- * Bucle de actualización en tiempo real.
+ * Bucle de actualización principal.
  */
 function startMarketSimulation() {
-    simulateMarket();
-    requestAnimationFrame(startMarketSimulation);
+    loadState();
+    updateDrinks();
+    updateTicker();
+    setInterval(simulateMarket, config.updateInterval);
 }
 
 // Iniciar
-updateDrinks();
-updateTicker();
+if (config.enableCRT) document.body.classList.add('crt-effect');
 startMarketSimulation();
 setInterval(updateCrashTimer, 1000);
