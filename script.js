@@ -5,14 +5,15 @@
 const config = {
     // Tiempos
     crashInterval: 300, // Segundos hasta el próximo crash (5 min = 300s)
-    updateInterval: 100, // Milisegundos entre actualizaciones (100ms)
+    updateInterval: 1000, // Milisegundos entre actualizaciones (1s, antes 100ms)
+    discountDuration: 30, // Segundos que dura una oferta
     
     // Porcentajes de fluctuación
-    priceFluctuation: { min: -0.002, max: 0.002 }, // ±0.2% por actualización
-    indexFluctuation: { min: -0.001, max: 0.001 }, // ±0.1% por actualización
+    priceFluctuation: { min: -0.001, max: 0.001 }, // ±0.1% por actualización (antes ±0.2%)
+    indexFluctuation: { min: -0.0005, max: 0.0005 }, // ±0.05% por actualización (antes ±0.1%)
     
     // Descuentos
-    discountProbability: 0.05, // Probabilidad de oferta (5%)
+    discountProbability: 0.02, // Probabilidad de oferta (2%, antes 5%)
     discountAmount: 0.2, // Descuento en oferta (20% = 0.2)
     
     // Crash
@@ -31,26 +32,26 @@ const config = {
  * Lista de bebidas con precios iniciales, categorías e íconos.
  */
 const drinks = [
-    { id: 1, name: "Mojito", price: 8, popularity: 0, category: "cocktails", prevPrice: 8, discount: false, icon: "icons/mojito.png" },
-    { id: 2, name: "Caipirinha", price: 7, popularity: 0, category: "cocktails", prevPrice: 7, discount: false, icon: "icons/caipirinha.png" },
-    { id: 3, name: "Gin Tonic", price: 9, popularity: 0, category: "cocktails", prevPrice: 9, discount: false, icon: "icons/gintonic.png" },
-    { id: 4, name: "Margarita", price: 8, popularity: 0, category: "cocktails", prevPrice: 8, discount: false, icon: "icons/margarita.png" },
-    { id: 5, name: "Negroni", price: 10, popularity: 0, category: "cocktails", prevPrice: 10, discount: false, icon: "icons/negroni.png" },
-    { id: 6, name: "Old Fashioned", price: 11, popularity: 0, category: "cocktails", prevPrice: 11, discount: false, icon: "icons/oldfashioned.png" },
-    { id: 7, name: "Daiquiri", price: 8.5, popularity: 0, category: "cocktails", prevPrice: 8.5, discount: false, icon: "icons/daiquiri.png" },
-    { id: 8, name: "Cerveza Artesanal", price: 5, popularity: 0, category: "beers", prevPrice: 5, discount: false, icon: "icons/artesanal.png" },
-    { id: 9, name: "IPA", price: 6, popularity: 0, category: "beers", prevPrice: 6, discount: false, icon: "icons/ipa.png" },
-    { id: 10, name: "Lager", price: 4.5, popularity: 0, category: "beers", prevPrice: 4.5, discount: false, icon: "icons/lager.png" },
-    { id: 11, name: "Stout", price: 6.5, popularity: 0, category: "beers", prevPrice: 6.5, discount: false, icon: "icons/stout.png" },
-    { id: 12, name: "Pilsner", price: 5, popularity: 0, category: "beers", prevPrice: 5, discount: false, icon: "icons/pilsner.png" },
-    { id: 13, name: "Weissbier", price: 5.5, popularity: 0, category: "beers", prevPrice: 5.5, discount: false, icon: "icons/weissbier.png" },
-    { id: 14, name: "Limonada", price: 3, popularity: 0, category: "non-alcoholic", prevPrice: 3, discount: false, icon: "icons/limonada.png" },
-    { id: 15, name: "Mojito Sin", price: 4, popularity: 0, category: "non-alcoholic", prevPrice: 4, discount: false, icon: "icons/mojitosin.png" },
-    { id: 16, name: "Té Helado", price: 3.5, popularity: 0, category: "non-alcoholic", prevPrice: 3.5, discount: false, icon: "icons/tehelado.png" },
-    { id: 17, name: "Agua Tónica", price: 2.5, popularity: 0, category: "non-alcoholic", prevPrice: 2.5, discount: false, icon: "icons/tonica.png" },
-    { id: 18, name: "Zumo Natural", price: 4, popularity: 0, category: "non-alcoholic", prevPrice: 4, discount: false, icon: "icons/zumo.png" },
-    { id: 19, name: "Kombucha", price: 4.5, popularity: 0, category: "non-alcoholic", prevPrice: 4.5, discount: false, icon: "icons/kombucha.png" },
-    { id: 20, name: "Smoothie", price: 5, popularity: 0, category: "non-alcoholic", prevPrice: 5, discount: false, icon: "icons/smoothie.png" }
+    { id: 1, name: "Mojito", price: 8, popularity: 0, category: "cocktails", prevPrice: 8, discount: false, icon: "icons/mojito.png", discountEnd: 0 },
+    { id: 2, name: "Caipirinha", price: 7, popularity: 0, category: "cocktails", prevPrice: 7, discount: false, icon: "icons/caipirinha.png", discountEnd: 0 },
+    { id: 3, name: "Gin Tonic", price: 9, popularity: 0, category: "cocktails", prevPrice: 9, discount: false, icon: "icons/gintonic.png", discountEnd: 0 },
+    { id: 4, name: "Margarita", price: 8, popularity: 0, category: "cocktails", prevPrice: 8, discount: false, icon: "icons/margarita.png", discountEnd: 0 },
+    { id: 5, name: "Negroni", price: 10, popularity: 0, category: "cocktails", prevPrice: 10, discount: false, icon: "icons/negroni.png", discountEnd: 0 },
+    { id: 6, name: "Old Fashioned", price: 11, popularity: 0, category: "cocktails", prevPrice: 11, discount: false, icon: "icons/oldfashioned.png", discountEnd: 0 },
+    { id: 7, name: "Daiquiri", price: 8.5, popularity: 0, category: "cocktails", prevPrice: 8.5, discount: false, icon: "icons/daiquiri.png", discountEnd: 0 },
+    { id: 8, name: "Cerveza Artesanal", price: 5, popularity: 0, category: "beers", prevPrice: 5, discount: false, icon: "icons/artesanal.png", discountEnd: 0 },
+    { id: 9, name: "IPA", price: 6, popularity: 0, category: "beers", prevPrice: 6, discount: false, icon: "icons/ipa.png", discountEnd: 0 },
+    { id: 10, name: "Lager", price: 4.5, popularity: 0, category: "beers", prevPrice: 4.5, discount: false, icon: "icons/lager.png", discountEnd: 0 },
+    { id: 11, name: "Stout", price: 6.5, popularity: 0, category: "beers", prevPrice: 6.5, discount: false, icon: "icons/stout.png", discountEnd: 0 },
+    { id: 12, name: "Pilsner", price: 5, popularity: 0, category: "beers", prevPrice: 5, discount: false, icon: "icons/pilsner.png", discountEnd: 0 },
+    { id: 13, name: "Weissbier", price: 5.5, popularity: 0, category: "beers", prevPrice: 5.5, discount: false, icon: "icons/weissbier.png", discountEnd: 0 },
+    { id: 14, name: "Limonada", price: 3, popularity: 0, category: "non-alcoholic", prevPrice: 3, discount: false, icon: "icons/limonada.png", discountEnd: 0 },
+    { id: 15, name: "Mojito Sin", price: 4, popularity: 0, category: "non-alcoholic", prevPrice: 4, discount: false, icon: "icons/mojitosin.png", discountEnd: 0 },
+    { id: 16, name: "Té Helado", price: 3.5, popularity: 0, category: "non-alcoholic", prevPrice: 3.5, discount: false, icon: "icons/tehelado.png", discountEnd: 0 },
+    { id: 17, name: "Agua Tónica", price: 2.5, popularity: 0, category: "non-alcoholic", prevPrice: 2.5, discount: false, icon: "icons/tonica.png", discountEnd: 0 },
+    { id: 18, name: "Zumo Natural", price: 4, popularity: 0, category: "non-alcoholic", prevPrice: 4, discount: false, icon: "icons/zumo.png", discountEnd: 0 },
+    { id: 19, name: "Kombucha", price: 4.5, popularity: 0, category: "non-alcoholic", prevPrice: 4.5, discount: false, icon: "icons/kombucha.png", discountEnd: 0 },
+    { id: 20, name: "Smoothie", price: 5, popularity: 0, category: "non-alcoholic", prevPrice: 5, discount: false, icon: "icons/smoothie.png", discountEnd: 0 }
 ];
 
 let cart = [];
@@ -117,7 +118,7 @@ const indexChart = new Chart(ctx, {
  */
 function syncState() {
     const state = {
-        drinks: drinks.map(d => ({ id: d.id, price: d.price, prevPrice: d.prevPrice, discount: d.discount, popularity: d.popularity })),
+        drinks: drinks.map(d => ({ id: d.id, price: d.price, prevPrice: d.prevPrice, discount: d.discount, popularity: d.popularity, discountEnd: d.discountEnd })),
         index,
         crashTime
     };
@@ -138,6 +139,7 @@ function loadState() {
                 d.prevPrice = saved.prevPrice;
                 d.discount = saved.discount;
                 d.popularity = saved.popularity;
+                d.discountEnd = saved.discountEnd;
             }
         });
         index = parsed.index;
@@ -251,6 +253,7 @@ buyButton.addEventListener('click', () => {
         drink.prevPrice = drink.price;
         drink.price = drink.price * 1.05;
         drink.discount = false;
+        drink.discountEnd = 0;
     });
 
     index += cart.length * 10;
@@ -292,18 +295,27 @@ function simulateMarket() {
     const now = Date.now();
     if (now - lastUpdate < config.updateInterval) return;
     lastUpdate = now;
+    const currentTime = Math.floor(now / 1000); // Tiempo en segundos
 
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
         const fluctuation = Math.random() * (config.priceFluctuation.max - config.priceFluctuation.min) + config.priceFluctuation.min;
         drink.price = Math.max(config.minPrice, drink.price * (1 + fluctuation));
-        const wasDiscounted = drink.discount;
-        drink.discount = Math.random() < config.discountProbability;
-        if (!wasDiscounted && drink.discount && !isDrinksOnly) {
-            showNotification(`¡Oferta flash en ${drink.name}! -${config.discountAmount * 100}%`, 'info');
-            if (soundEnabled) offerSound.play().catch(() => {});
+
+        // Gestionar duración de descuentos
+        if (drink.discount && currentTime >= drink.discountEnd) {
+            drink.discount = false;
+            drink.discountEnd = 0;
+        } else if (!drink.discount && Math.random() < config.discountProbability) {
+            drink.discount = true;
+            drink.discountEnd = currentTime + config.discountDuration;
+            if (!isDrinksOnly) {
+                showNotification(`¡Oferta flash en ${drink.name}! -${config.discountAmount * 100}%`, 'info');
+                if (soundEnabled) offerSound.play().catch(() => {});
+            }
         }
     });
+
     if (!isDrinksOnly) {
         const indexFluctuation = Math.random() * (config.indexFluctuation.max - config.indexFluctuation.min) + config.indexFluctuation.min;
         index = Math.max(config.minIndex, index * (1 + indexFluctuation));
@@ -350,6 +362,7 @@ function crashMarket() {
         drink.prevPrice = drink.price;
         drink.price = drink.price * (1 - config.crashPriceDrop);
         drink.discount = false;
+        drink.discountEnd = 0;
     });
     if (!isDrinksOnly) {
         index *= (1 - config.crashIndexDrop);
