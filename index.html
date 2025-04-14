@@ -68,7 +68,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
-        import { getDatabase } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js';
         const firebaseConfig = {
             apiKey: "AIzaSyAV9R90-9wiGI6TUdxf3rJKer8ul_UnPP4",
             authDomain: "downjone-sync.firebaseapp.com",
@@ -80,6 +80,34 @@
         };
         const app = initializeApp(firebaseConfig);
         window.db = getDatabase(app);
+        // Inicializar Firebase con datos por defecto
+        const initialState = {
+            drinks: [
+                { id: 1, name: "Mojito", price: 8, prevPrice: 8, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 2, name: "Caipirinha", price: 7, prevPrice: 7, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 3, name: "Gin Tonic", price: 9, prevPrice: 9, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 4, name: "Margarita", price: 8, prevPrice: 8, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 5, name: "Negroni", price: 10, prevPrice: 10, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 6, name: "Old Fashioned", price: 11, prevPrice: 11, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 7, name: "Daiquiri", price: 8.5, prevPrice: 8.5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 8, name: "Cerveza Artesanal", price: 5, prevPrice: 5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 9, name: "IPA", price: 6, prevPrice: 6, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 10, name: "Lager", price: 4.5, prevPrice: 4.5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 11, name: "Stout", price: 6.5, prevPrice: 6.5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 12, name: "Pilsner", price: 5, prevPrice: 5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 13, name: "Weissbier", price: 5.5, prevPrice: 5.5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 14, name: "Limonada", price: 3, prevPrice: 3, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 15, name: "Mojito Sin", price: 4, prevPrice: 4, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 16, name: "Té Helado", price: 3.5, prevPrice: 3.5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 17, name: "Agua Tónica", price: 2.5, prevPrice: 2.5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 18, name: "Zumo Natural", price: 4, prevPrice: 4, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 19, name: "Kombucha", price: 4.5, prevPrice: 4.5, discount: false, popularity: 0, discountEnd: 0 },
+                { id: 20, name: "Smoothie", price: 5, prevPrice: 5, discount: false, popularity: 0, discountEnd: 0 }
+            ],
+            index: 1000,
+            crashTime: 300
+        };
+        set(ref(window.db, 'state'), initialState).catch(err => console.error('Firebase init error:', err));
     </script>
     <script src="script.js"></script>
 </body>

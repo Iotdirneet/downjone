@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bar-down-jones-v1';
+const CACHE_NAME = 'bar-down-jones-v2'; // Cambiado a v2 para invalidar caché
 const urlsToCache = [
     '/',
     'index.html',

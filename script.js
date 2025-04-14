@@ -120,7 +120,7 @@ function syncState() {
 function loadState() {
     db.ref('state').on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data) {
+        if (data && data.drinks) {
             drinks.forEach(d => {
                 const saved = data.drinks.find(s => s.id === d.id);
                 if (saved) {
@@ -131,8 +131,8 @@ function loadState() {
                     d.discountEnd = saved.discountEnd;
                 }
             });
-            index = data.index;
-            crashTime = data.crashTime;
+            index = data.index || 1000;
+            crashTime = data.crashTime || config.crashInterval;
             indexHistory = [index];
             updateDrinks();
             updateTicker();
@@ -142,6 +142,11 @@ function loadState() {
                 const seconds = crashTime % 60;
                 if (crashTimer) crashTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
             }
+        } else {
+            // Fallback: renderizar bebidas locales si Firebase está vacío
+            updateDrinks();
+            updateTicker();
+            if (!isDrinksOnly) updateIndex();
         }
     }, (err) => console.error('Firebase read error:', err));
 }
@@ -172,9 +177,9 @@ function updateDrinks() {
             drinkLi = document.createElement('li');
             drinkLi.id = id;
             drinkLi.classList.add('drink-item');
-            if (drink.category === 'cocktails') cocktailsList.appendChild(drinkLi);
-            else if (drink.category === 'beers') beersList.appendChild(drinkLi);
-            else nonAlcoholicList.appendChild(drinkLi);
+            if (drink.category === 'cocktails' && cocktailsList) cocktailsList.appendChild(drinkLi);
+            else if (drink.category === 'beers' && beersList) beersList.appendChild(drinkLi);
+            else if (drink.category === 'non-alcoholic' && nonAlcoholicList) nonAlcoholicList.appendChild(drinkLi);
         }
         const currentPrice = drink.discount ? (drink.price * (1 - config.discountAmount)).toFixed(2) : drink.price.toFixed(2);
         const currentDiscount = drink.discount;
@@ -220,7 +225,7 @@ function addToCart(drinkId) {
  * Actualiza el carrito.
  */
 function updateCart() {
-    if (isDrinksOnly) return;
+    if (isDrinksOnly || !cartItems) return;
     cartItems.innerHTML = '';
     let total = 0;
     cart.forEach((item) => {
@@ -229,51 +234,53 @@ function updateCart() {
         cartItems.appendChild(li);
         total += item.price;
     });
-    cartTotal.textContent = total.toFixed(2);
+    if (cartTotal) cartTotal.textContent = total.toFixed(2);
 }
 
 /**
  * Procesa la compra.
  */
-buyButton.addEventListener('click', () => {
-    if (cart.length === 0) {
-        showNotification('El pedido está vacío.', 'error');
-        return;
-    }
+if (buyButton) {
+    buyButton.addEventListener('click', () => {
+        if (cart.length === 0) {
+            showNotification('El pedido está vacío.', 'error');
+            return;
+        }
 
-    cart.forEach(item => {
-        const drink = drinks.find(d => d.id === item.id);
-        drink.popularity += 1;
-        drink.prevPrice = drink.price;
-        drink.price = drink.price * 1.05;
-        drink.discount = false;
-        drink.discountEnd = 0;
+        cart.forEach(item => {
+            const drink = drinks.find(d => d.id === item.id);
+            drink.popularity += 1;
+            drink.prevPrice = drink.price;
+            drink.price = drink.price * 1.05;
+            drink.discount = false;
+            drink.discountEnd = 0;
+        });
+
+        index += cart.length * 10;
+        updateIndex();
+
+        const transaction = {
+            items: [...cart],
+            total: cart.reduce((sum, item) => sum + item.price, 0),
+            date: new Date().toLocaleString()
+        };
+        history.push(transaction);
+
+        showNotification(`Compra realizada por €${transaction.total.toFixed(2)}!`, 'success');
+        updateHistory();
+        cart = [];
+        updateCart();
+        updateDrinks();
+        updateTicker();
+        syncState();
     });
-
-    index += cart.length * 10;
-    updateIndex();
-
-    const transaction = {
-        items: [...cart],
-        total: cart.reduce((sum, item) => sum + item.price, 0),
-        date: new Date().toLocaleString()
-    };
-    history.push(transaction);
-
-    showNotification(`Compra realizada por €${transaction.total.toFixed(2)}!`, 'success');
-    updateHistory();
-    cart = [];
-    updateCart();
-    updateDrinks();
-    updateTicker();
-    syncState();
-});
+}
 
 /**
  * Actualiza el historial.
  */
 function updateHistory() {
-    if (isDrinksOnly) return;
+    if (isDrinksOnly || !historyList) return;
     historyList.innerHTML = '';
     history.forEach((trans, index) => {
         const li = document.createElement('li');
@@ -304,7 +311,7 @@ function simulateMarket() {
             drink.discount = true;
             drink.discountEnd = currentTime + config.discountDuration;
             showNotification(`¡Oferta flash en ${drink.name}! -${config.discountAmount * 100}%`, 'info');
-            if (soundEnabled) offerSound.play().catch(() => {});
+            if (soundEnabled && offerSound) offerSound.play().catch(() => {});
         }
     });
 
@@ -320,7 +327,7 @@ function simulateMarket() {
  * Actualiza el índice y el gráfico.
  */
 function updateIndex() {
-    if (isDrinksOnly) return;
+    if (isDrinksOnly || !indexValue) return;
     indexValue.textContent = index.toFixed(2);
     indexHistory.push(index);
     if (indexHistory.length > 50) indexHistory.shift();
@@ -358,8 +365,8 @@ function crashMarket() {
     });
     index *= (1 - config.crashIndexDrop);
     updateIndex();
-    indexSection.classList.add('crash');
-    setTimeout(() => indexSection.classList.remove('crash'), 3000);
+    if (indexSection) indexSection.classList.add('crash');
+    setTimeout(() => indexSection && indexSection.classList.remove('crash'), 3000);
     if (soundEnabled && crashSound) crashSound.play().catch(() => {});
     showNotification(`¡Crash! Precios caídos un ${config.crashPriceDrop * 100}%.`, 'error');
     updateDrinks();
@@ -371,6 +378,7 @@ function crashMarket() {
  * Actualiza el ticker.
  */
 function updateTicker() {
+    if (!tickerContent) return;
     const currentContent = drinks.map(drink => {
         const arrowClass = drink.price > drink.prevPrice ? 'arrow-up' : drink.price < drink.prevPrice ? 'arrow-down' : '';
         const displayPrice = drink.discount ? (drink.price * (1 - config.discountAmount)).toFixed(2) : drink.price.toFixed(2);
@@ -384,26 +392,32 @@ function updateTicker() {
 /**
  * Alterna el sonido.
  */
-soundToggle.addEventListener('change', () => {
-    soundEnabled = soundToggle.checked;
-});
+if (soundToggle) {
+    soundToggle.addEventListener('change', () => {
+        soundEnabled = soundToggle.checked;
+    });
+}
 
 /**
  * Alterna el tema claro/oscuro.
  */
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('light-theme');
-    indexChart.data.datasets[0].borderColor = document.body.classList.contains('light-theme') ? '#d32f2f' : '#00ffcc';
-    indexChart.data.datasets[0].backgroundColor = document.body.classList.contains('light-theme') ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 255, 204, 0.1)';
-    indexChart.update();
-});
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('light-theme');
+        indexChart.data.datasets[0].borderColor = document.body.classList.contains('light-theme') ? '#d32f2f' : '#00ffcc';
+        indexChart.data.datasets[0].backgroundColor = document.body.classList.contains('light-theme') ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 255, 204, 0.1)';
+        indexChart.update();
+    });
+}
 
 /**
  * Alterna modo Solo Bebidas/Completo.
  */
-modeToggle.addEventListener('click', () => {
-    toggleMode();
-});
+if (modeToggle) {
+    modeToggle.addEventListener('click', () => {
+        toggleMode();
+    });
+}
 
 document.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.key.toLowerCase() === 'm') {
@@ -415,7 +429,7 @@ document.addEventListener('keydown', (event) => {
 function toggleMode() {
     isDrinksOnly = !isDrinksOnly;
     document.body.classList.toggle('drinks-only');
-    modeToggle.textContent = isDrinksOnly ? 'Modo Completo' : 'Modo Solo Bebidas';
+    if (modeToggle) modeToggle.textContent = isDrinksOnly ? 'Modo Completo' : 'Modo Solo Bebidas';
     updateDrinks();
     updateTicker();
     if (!isDrinksOnly) {
@@ -431,44 +445,55 @@ function toggleMode() {
 /**
  * Alterna pantalla completa.
  */
-fullscreenToggle.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-        document.exitFullscreen();
-    }
-});
+if (fullscreenToggle) {
+    fullscreenToggle.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen();
+        }
+    });
+}
 
 /**
  * Pausa/reanuda el ticker.
  */
-tickerToggle.addEventListener('click', () => {
-    const isPaused = tickerContent.classList.toggle('paused');
-    tickerToggle.textContent = isPaused ? 'Reanudar Ticker' : 'Pausar Ticker';
-});
+if (tickerToggle) {
+    tickerToggle.addEventListener('click', () => {
+        const isPaused = tickerContent.classList.toggle('paused');
+        tickerToggle.textContent = isPaused ? 'Reanudar Ticker' : 'Pausar Ticker';
+    });
+}
 
 /**
  * Exporta el historial como CSV.
  */
-exportHistory.addEventListener('click', () => {
-    if (isDrinksOnly) return;
-    const csv = ['Fecha,Bebidas,Total'];
-    history.forEach(t => {
-        csv.push(`${t.date},"${t.items.map(i => i.name).join(';')}",€${t.total.toFixed(2)}`);
+if (exportHistory) {
+    exportHistory.addEventListener('click', () => {
+        if (isDrinksOnly) return;
+        const csv = ['Fecha,Bebidas,Total'];
+        history.forEach(t => {
+            csv.push(`${t.date},"${t.items.map(i => i.name).join(';')}",€${t.total.toFixed(2)}`);
+        });
+        const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'historial_bar_down_jones.csv';
+        a.click();
+        URL.revokeObjectURL(url);
     });
-    const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'historial_bar_down_jones.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-});
+}
 
 /**
  * Bucle de actualización principal.
  */
 function startMarketSimulation() {
+    // Renderizar bebidas inmediatamente
+    updateDrinks();
+    updateTicker();
+    if (!isDrinksOnly) updateIndex();
+    // Iniciar sincronización con Firebase
     loadState();
     if (!isDrinksOnly) {
         setInterval(simulateMarket, config.updateInterval);
