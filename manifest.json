@@ -3,12 +3,12 @@
     "short_name": "Down Jones",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#1a1a1a",
-    "theme_color": "#00ffcc",
+    "background_color": "#121212",
+    "theme_color": "#00e676",
     "icons": [
         {
             "src": "icons/mojito.png",
-            "sizes": "24x24",
+            "sizes": "32x32",
             "type": "image/png"
         }
     ]

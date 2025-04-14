@@ -6,11 +6,13 @@
     <title>Bar Down Jones - Simulador de Bolsa</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Bar Down Jones</h1>
+        <header>
+            <h1>Bar Down Jones</h1>
+        </header>
         <div class="controls">
             <label><input type="checkbox" id="sound-toggle"> Activar sonido</label>
             <button id="theme-toggle">Cambiar Tema</button>
@@ -21,7 +23,6 @@
         </div>
         <div class="index">
             <h2>Índice Down Jones: <span id="index-value">1000</span></h2>
-            <canvas id="index-chart" width="200" height="100"></canvas>
             <p>Próximo Crash: <span id="crash-timer">5:00</span></p>
         </div>
         <div class="drinks">

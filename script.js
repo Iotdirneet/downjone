@@ -38,7 +38,6 @@ const drinks = [
 let cart = [];
 let index = 1000;
 let history = [];
-let indexHistory = [1000];
 let crashTime = config.crashInterval;
 let soundEnabled = false;
 let isDrinksOnly = false;
@@ -65,28 +64,6 @@ const exportHistory = document.getElementById('export-history');
 const crashSound = document.getElementById('crash-sound');
 const offerSound = document.getElementById('offer-sound');
 const notifications = document.getElementById('notifications');
-
-const ctx = document.getElementById('index-chart')?.getContext('2d');
-const indexChart = ctx ? new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: [],
-        datasets: [{
-            label: 'Índice Down Jones',
-            data: indexHistory,
-            borderColor: '#00ffcc',
-            backgroundColor: 'rgba(0, 255, 204, 0.1)',
-            fill: true,
-            tension: 0.1
-        }]
-    },
-    options: {
-        scales: {
-            x: { display: false },
-            y: { beginAtZero: false }
-        }
-    }
-}) : null;
 
 function syncState() {
     console.log('Guardando estado en localStorage');
@@ -115,7 +92,6 @@ function loadState() {
         });
         index = data.index || 1000;
         crashTime = data.crashTime || config.crashInterval;
-        indexHistory = [index];
     }
     updateDrinks();
     updateTicker();
@@ -285,13 +261,8 @@ function simulateMarket() {
 }
 
 function updateIndex() {
-    if (isDrinksOnly || !indexValue || !indexChart) return;
+    if (isDrinksOnly || !indexValue) return;
     indexValue.textContent = index.toFixed(2);
-    indexHistory.push(index);
-    if (indexHistory.length > 50) indexHistory.shift();
-    indexChart.data.labels = Array(indexHistory.length).fill('').map((_, i) => i);
-    indexChart.data.datasets[0].data = indexHistory;
-    indexChart.update();
     console.log('Índice actualizado:', index);
 }
 
@@ -351,11 +322,6 @@ if (soundToggle) {
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
         document.body.classList.toggle('light-theme');
-        if (indexChart) {
-            indexChart.data.datasets[0].borderColor = document.body.classList.contains('light-theme') ? '#d32f2f' : '#00ffcc';
-            indexChart.data.datasets[0].backgroundColor = document.body.classList.contains('light-theme') ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 255, 204, 0.1)';
-            indexChart.update();
-        }
         console.log('Tema cambiado a', document.body.classList.contains('light-theme') ? 'claro' : 'oscuro');
     });
 }

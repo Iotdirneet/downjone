@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bar-down-jones-v5';
+const CACHE_NAME = 'bar-down-jones-v6';
 const urlsToCache = [
     '/',
     'index.html',
