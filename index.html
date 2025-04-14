@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bar Down Jones - Simulador de Bolsa</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -14,6 +15,9 @@
             <label><input type="checkbox" id="sound-toggle"> Activar sonido</label>
             <button id="theme-toggle">Cambiar Tema</button>
             <button id="mode-toggle">Modo Solo Bebidas</button>
+            <button id="fullscreen-toggle">Pantalla Completa</button>
+            <button id="ticker-toggle">Pausar Ticker</button>
+            <button id="export-history">Exportar Historial</button>
         </div>
         <div class="index">
             <h2>Índice Down Jones: <span id="index-value">1000</span></h2>
@@ -54,7 +58,13 @@
         </div>
         <div id="notifications"></div>
     </div>
-    <audio id="crash-sound" src="https://www.soundjay.com/buttons/beep-01a.mp3"></audio>
+    <audio id="crash-sound" src="crash.mp3"></audio>
+    <audio id="offer-sound" src="offer.mp3"></audio>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
     <script src="script.js"></script>
 </body>
 </html>

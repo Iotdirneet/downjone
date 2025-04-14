@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
 body {
-    font-family: 'Courier New', monospace;
+    font-family: 'Orbitron', monospace;
     background-color: #0d0d0d;
     color: #e0e0e0;
     margin: 0;
@@ -7,8 +9,25 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
+body:not(.light-theme)::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        rgba(0, 0, 0, 0.05) 0,
+        rgba(0, 0, 0, 0.05) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 1001;
+}
+
 body.light-theme {
-    background-color: #f5e6cc;
+    background-color: #fff3e0;
     color: #333;
 }
 
@@ -37,7 +56,10 @@ body.light-theme .category h3 {
 body.light-theme #buy-button,
 body.light-theme .drink-item button,
 body.light-theme #mode-toggle,
-body.light-theme #theme-toggle {
+body.light-theme #theme-toggle,
+body.light-theme #fullscreen-toggle,
+body.light-theme #ticker-toggle,
+body.light-theme #export-history {
     background: #d32f2f;
     color: #fff;
 }
@@ -45,24 +67,27 @@ body.light-theme #theme-toggle {
 body.light-theme #buy-button:hover,
 body.light-theme .drink-item button:hover,
 body.light-theme #mode-toggle:hover,
-body.light-theme #theme-toggle:hover {
+body.light-theme #theme-toggle:hover,
+body.light-theme #fullscreen-toggle:hover,
+body.light-theme #ticker-toggle:hover,
+body.light-theme #export-history:hover {
     background: #b71c1c;
 }
 
 body.drinks-only .index,
 body.drinks-only .bottom-section,
-body.drinks-only .notifications {
+body.drinks-only .notifications,
+body.drinks-only .controls label,
+body.drinks-only #theme-toggle,
+body.drinks-only #mode-toggle,
+body.drinks-only #ticker-toggle,
+body.drinks-only #export-history {
     display: none;
 }
 
 body.drinks-only .controls {
     display: flex;
     justify-content: center;
-}
-
-body.drinks-only .controls label,
-body.drinks-only #theme-toggle {
-    display: none;
 }
 
 body.drinks-only .container {
@@ -107,8 +132,9 @@ h1 {
     width: 100%;
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 10px;
     margin-bottom: 20px;
+    flex-wrap: wrap;
 }
 
 .controls label {
@@ -116,7 +142,10 @@ h1 {
 }
 
 #theme-toggle,
-#mode-toggle {
+#mode-toggle,
+#fullscreen-toggle,
+#ticker-toggle,
+#export-history {
     background: #ff4081;
     color: #fff;
     border: none;
@@ -126,7 +155,10 @@ h1 {
 }
 
 #theme-toggle:hover,
-#mode-toggle:hover {
+#mode-toggle:hover,
+#fullscreen-toggle:hover,
+#ticker-toggle:hover,
+#export-history:hover {
     background: #f50057;
 }
 
@@ -215,6 +247,7 @@ h1 {
     justify-content: space-between;
     margin-bottom: 5px;
     font-size: 0.95em;
+    box-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
 }
 
 .drink-item.discount {
@@ -239,6 +272,8 @@ h1 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
 }
 
 .drink-item .name .discount-text {
@@ -250,6 +285,7 @@ h1 {
 .drink-item .price {
     min-width: 80px;
     text-align: center;
+    transition: all 0.3s ease;
 }
 
 .drink-item .popularity {
@@ -260,6 +296,12 @@ h1 {
 .drink-item .price-change {
     min-width: 30px;
     text-align: center;
+}
+
+.drink-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
 }
 
 .arrow-up::before {
@@ -376,7 +418,7 @@ body.drinks-only .drink-item button {
 }
 
 .ticker {
-    background: #0d0d0d;
+    background: linear-gradient(180deg, #0d0d0d, #1c2526);
     padding: 10px;
     overflow: hidden;
     white-space: nowrap;
@@ -386,12 +428,17 @@ body.drinks-only .drink-item button {
     width: 100vw;
     box-sizing: border-box;
     border-top: 1px solid #00ffcc;
+    box-shadow: 0 -2px 10px #00ffcc;
     z-index: 1000;
 }
 
 #ticker-content {
     display: inline-block;
     animation: ticker 80s linear infinite;
+}
+
+#ticker-content.paused {
+    animation-play-state: paused;
 }
 
 .ticker-item {
