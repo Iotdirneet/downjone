@@ -183,7 +183,7 @@ function updateHistory() {
 function simulateMarket() {
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
-        const fluctuation = (Math.random() * 0.04 - 0.02);
+        const fluctuation = (Math.random() * 0.004 - 0.002); // ±0.2% por 100ms
         drink.price = Math.max(2, drink.price * (1 + fluctuation));
         const wasDiscounted = drink.discount;
         drink.discount = Math.random() < 0.05;
@@ -192,7 +192,7 @@ function simulateMarket() {
         }
     });
     if (!isDrinksOnly) {
-        index = Math.max(500, index * (1 + (Math.random() * 0.02 - 0.01)));
+        index = Math.max(500, index * (1 + (Math.random() * 0.002 - 0.001))); // ±0.1% por 100ms
         updateIndex();
     }
     displayDrinks();
@@ -294,8 +294,14 @@ function toggleMode() {
     }
 }
 
+// Bucle de actualización en tiempo real
+function startMarketSimulation() {
+    simulateMarket();
+    requestAnimationFrame(startMarketSimulation);
+}
+
 // Iniciar
 displayDrinks();
 updateTicker();
-setInterval(simulateMarket, 10000);
+startMarketSimulation();
 setInterval(updateCrashTimer, 1000);
