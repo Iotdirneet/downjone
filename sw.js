@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bar-down-jones-v2'; // Cambiado a v2 para invalidar caché
+const CACHE_NAME = 'bar-down-jones-v3'; // Actualizado a v3
 const urlsToCache = [
     '/',
     'index.html',
@@ -33,6 +33,8 @@ self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(urlsToCache))
+            .then(() => console.log('Archivos cacheados'))
+            .catch(err => console.error('Cache error:', err))
     );
 });
 
@@ -40,6 +42,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => response || fetch(event.request))
+            .catch(err => console.error('Fetch error:', err))
     );
 });
 
@@ -54,6 +57,7 @@ self.addEventListener('activate', event => {
                     }
                 })
             );
-        })
+        }).then(() => console.log('Caché antiguo limpiado'))
+        .catch(err => console.error('Activate error:', err))
     );
 });

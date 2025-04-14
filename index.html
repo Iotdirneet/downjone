@@ -62,7 +62,9 @@
     <audio id="offer-sound" src="offer.mp3"></audio>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.error('Service Worker error:', err));
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('Service Worker registrado'))
+                .catch(err => console.error('Service Worker error:', err));
         }
     </script>
     <!-- Firebase SDK -->
@@ -80,6 +82,7 @@
         };
         const app = initializeApp(firebaseConfig);
         window.db = getDatabase(app);
+        console.log('Firebase inicializado');
         // Inicializar Firebase con datos por defecto
         const initialState = {
             drinks: [
@@ -107,7 +110,9 @@
             index: 1000,
             crashTime: 300
         };
-        set(ref(window.db, 'state'), initialState).catch(err => console.error('Firebase init error:', err));
+        set(ref(window.db, 'state'), initialState)
+            .then(() => console.log('Firebase inicializado con estado por defecto'))
+            .catch(err => console.error('Firebase init error:', err));
     </script>
     <script src="script.js"></script>
 </body>

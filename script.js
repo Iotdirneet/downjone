@@ -79,8 +79,8 @@ const notifications = document.getElementById('notifications');
 /**
  * Gráfico con Chart.js
  */
-const ctx = document.getElementById('index-chart').getContext('2d');
-const indexChart = new Chart(ctx, {
+const ctx = document.getElementById('index-chart')?.getContext('2d');
+const indexChart = ctx ? new Chart(ctx, {
     type: 'line',
     data: {
         labels: [],
@@ -99,7 +99,7 @@ const indexChart = new Chart(ctx, {
             y: { beginAtZero: false }
         }
     }
-});
+}) : null;
 
 /**
  * Sincroniza estado con Firebase.
@@ -111,15 +111,20 @@ function syncState() {
         index,
         crashTime
     };
-    db.ref('state').set(state).catch(err => console.error('Firebase write error:', err));
+    console.log('Sincronizando estado:', state);
+    db.ref('state').set(state)
+        .then(() => console.log('Estado sincronizado'))
+        .catch(err => console.error('Firebase write error:', err));
 }
 
 /**
  * Carga estado desde Firebase.
  */
 function loadState() {
+    console.log('Iniciando loadState');
     db.ref('state').on('value', (snapshot) => {
         const data = snapshot.val();
+        console.log('Firebase snapshot:', data);
         if (data && data.drinks) {
             drinks.forEach(d => {
                 const saved = data.drinks.find(s => s.id === d.id);
@@ -143,10 +148,11 @@ function loadState() {
                 if (crashTimer) crashTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
             }
         } else {
-            // Fallback: renderizar bebidas locales si Firebase está vacío
+            console.warn('No hay datos en Firebase, usando datos locales');
             updateDrinks();
             updateTicker();
             if (!isDrinksOnly) updateIndex();
+            syncState();
         }
     }, (err) => console.error('Firebase read error:', err));
 }
@@ -155,7 +161,7 @@ function loadState() {
  * Muestra una notificación.
  */
 function showNotification(message, type = 'info') {
-    if (isDrinksOnly) return;
+    if (isDrinksOnly || !notifications) return;
     const now = Date.now();
     if (now - lastNotification < 1000) return;
     lastNotification = now;
@@ -170,6 +176,11 @@ function showNotification(message, type = 'info') {
  * Actualiza las bebidas en las columnas.
  */
 function updateDrinks() {
+    console.log('Ejecutando updateDrinks');
+    if (!cocktailsList || !beersList || !nonAlcoholicList) {
+        console.error('Listas de bebidas no encontradas');
+        return;
+    }
     drinks.forEach(drink => {
         const id = `drink-${drink.id}`;
         let drinkLi = document.getElementById(id);
@@ -177,9 +188,9 @@ function updateDrinks() {
             drinkLi = document.createElement('li');
             drinkLi.id = id;
             drinkLi.classList.add('drink-item');
-            if (drink.category === 'cocktails' && cocktailsList) cocktailsList.appendChild(drinkLi);
-            else if (drink.category === 'beers' && beersList) beersList.appendChild(drinkLi);
-            else if (drink.category === 'non-alcoholic' && nonAlcoholicList) nonAlcoholicList.appendChild(drinkLi);
+            if (drink.category === 'cocktails') cocktailsList.appendChild(drinkLi);
+            else if (drink.category === 'beers') beersList.appendChild(drinkLi);
+            else if (drink.category === 'non-alcoholic') nonAlcoholicList.appendChild(drinkLi);
         }
         const currentPrice = drink.discount ? (drink.price * (1 - config.discountAmount)).toFixed(2) : drink.price.toFixed(2);
         const currentDiscount = drink.discount;
@@ -225,7 +236,7 @@ function addToCart(drinkId) {
  * Actualiza el carrito.
  */
 function updateCart() {
-    if (isDrinksOnly || !cartItems) return;
+    if (isDrinksOnly || !cartItems || !cartTotal) return;
     cartItems.innerHTML = '';
     let total = 0;
     cart.forEach((item) => {
@@ -234,7 +245,7 @@ function updateCart() {
         cartItems.appendChild(li);
         total += item.price;
     });
-    if (cartTotal) cartTotal.textContent = total.toFixed(2);
+    cartTotal.textContent = total.toFixed(2);
 }
 
 /**
@@ -298,6 +309,7 @@ function simulateMarket() {
     if (now - lastUpdate < config.updateInterval) return;
     lastUpdate = now;
     const currentTime = Math.floor(now / 1000);
+    console.log('Simulando mercado');
 
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
@@ -311,7 +323,9 @@ function simulateMarket() {
             drink.discount = true;
             drink.discountEnd = currentTime + config.discountDuration;
             showNotification(`¡Oferta flash en ${drink.name}! -${config.discountAmount * 100}%`, 'info');
-            if (soundEnabled && offerSound) offerSound.play().catch(() => {});
+            if (soundEnabled && offerSound) {
+                offerSound.play().then(() => console.log('Oferta sonido reproducido')).catch(err => console.error('Oferta sonido error:', err));
+            }
         }
     });
 
@@ -327,13 +341,14 @@ function simulateMarket() {
  * Actualiza el índice y el gráfico.
  */
 function updateIndex() {
-    if (isDrinksOnly || !indexValue) return;
+    if (isDrinksOnly || !indexValue || !indexChart) return;
     indexValue.textContent = index.toFixed(2);
     indexHistory.push(index);
     if (indexHistory.length > 50) indexHistory.shift();
     indexChart.data.labels = Array(indexHistory.length).fill('').map((_, i) => i);
     indexChart.data.datasets[0].data = indexHistory;
     indexChart.update();
+    console.log('Índice actualizado:', index);
 }
 
 /**
@@ -357,6 +372,7 @@ function updateCrashTimer() {
  */
 function crashMarket() {
     if (isDrinksOnly) return;
+    console.log('Ejecutando crash');
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
         drink.price = drink.price * (1 - config.crashPriceDrop);
@@ -367,7 +383,9 @@ function crashMarket() {
     updateIndex();
     if (indexSection) indexSection.classList.add('crash');
     setTimeout(() => indexSection && indexSection.classList.remove('crash'), 3000);
-    if (soundEnabled && crashSound) crashSound.play().catch(() => {});
+    if (soundEnabled && crashSound) {
+        crashSound.play().then(() => console.log('Crash sonido reproducido')).catch(err => console.error('Crash sonido error:', err));
+    }
     showNotification(`¡Crash! Precios caídos un ${config.crashPriceDrop * 100}%.`, 'error');
     updateDrinks();
     updateTicker();
@@ -386,6 +404,7 @@ function updateTicker() {
     }).join('');
     if (tickerContent.innerHTML !== currentContent) {
         tickerContent.innerHTML = currentContent;
+        console.log('Ticker actualizado');
     }
 }
 
@@ -395,6 +414,7 @@ function updateTicker() {
 if (soundToggle) {
     soundToggle.addEventListener('change', () => {
         soundEnabled = soundToggle.checked;
+        console.log('Sonido:', soundEnabled ? 'activado' : 'desactivado');
     });
 }
 
@@ -404,9 +424,12 @@ if (soundToggle) {
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
         document.body.classList.toggle('light-theme');
-        indexChart.data.datasets[0].borderColor = document.body.classList.contains('light-theme') ? '#d32f2f' : '#00ffcc';
-        indexChart.data.datasets[0].backgroundColor = document.body.classList.contains('light-theme') ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 255, 204, 0.1)';
-        indexChart.update();
+        if (indexChart) {
+            indexChart.data.datasets[0].borderColor = document.body.classList.contains('light-theme') ? '#d32f2f' : '#00ffcc';
+            indexChart.data.datasets[0].backgroundColor = document.body.classList.contains('light-theme') ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 255, 204, 0.1)';
+            indexChart.update();
+        }
+        console.log('Tema cambiado');
     });
 }
 
@@ -430,6 +453,7 @@ function toggleMode() {
     isDrinksOnly = !isDrinksOnly;
     document.body.classList.toggle('drinks-only');
     if (modeToggle) modeToggle.textContent = isDrinksOnly ? 'Modo Completo' : 'Modo Solo Bebidas';
+    console.log('Modo:', isDrinksOnly ? 'Solo Bebidas' : 'Completo');
     updateDrinks();
     updateTicker();
     if (!isDrinksOnly) {
@@ -438,7 +462,7 @@ function toggleMode() {
         updateIndex();
     }
     if (isDrinksOnly && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+        document.documentElement.requestFullscreen().catch(err => console.error('Fullscreen error:', err));
     }
 }
 
@@ -448,7 +472,7 @@ function toggleMode() {
 if (fullscreenToggle) {
     fullscreenToggle.addEventListener('click', () => {
         if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
+            document.documentElement.requestFullscreen().catch(err => console.error('Fullscreen error:', err));
         } else {
             document.exitFullscreen();
         }
@@ -462,6 +486,7 @@ if (tickerToggle) {
     tickerToggle.addEventListener('click', () => {
         const isPaused = tickerContent.classList.toggle('paused');
         tickerToggle.textContent = isPaused ? 'Reanudar Ticker' : 'Pausar Ticker';
+        console.log('Ticker:', isPaused ? 'pausado' : 'reanudado');
     });
 }
 
@@ -482,6 +507,7 @@ if (exportHistory) {
         a.download = 'historial_bar_down_jones.csv';
         a.click();
         URL.revokeObjectURL(url);
+        console.log('Historial exportado');
     });
 }
 
@@ -489,18 +515,31 @@ if (exportHistory) {
  * Bucle de actualización principal.
  */
 function startMarketSimulation() {
-    // Renderizar bebidas inmediatamente
+    console.log('Iniciando simulación');
+    // Renderizar inmediatamente
     updateDrinks();
     updateTicker();
-    if (!isDrinksOnly) updateIndex();
-    // Iniciar sincronización con Firebase
-    loadState();
     if (!isDrinksOnly) {
-        setInterval(simulateMarket, config.updateInterval);
-        setInterval(updateCrashTimer, 1000);
+        updateIndex();
+        updateCart();
+        updateHistory();
     }
+    // Iniciar Firebase
+    loadState();
+    // Actualizar dinámicamente
+    setInterval(() => {
+        updateDrinks();
+        updateTicker();
+        if (!isDrinksOnly) {
+            simulateMarket();
+            updateCrashTimer();
+        }
+    }, config.updateInterval);
 }
 
 // Iniciar
 if (config.enableCRT) document.body.classList.add('crt-effect');
-startMarketSimulation();
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM cargado, iniciando app');
+    startMarketSimulation();
+});
