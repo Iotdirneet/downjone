@@ -1,35 +1,47 @@
 /**
  * Configuración centralizada de parámetros para Bar Down Jones.
- * Modifica estos valores para ajustar tiempos, porcentajes y límites.
  */
 const config = {
-    // Tiempos
-    crashInterval: 300, // Segundos hasta el próximo crash (5 min = 300s)
-    updateInterval: 1000, // Milisegundos entre actualizaciones (1s, antes 100ms)
-    discountDuration: 30, // Segundos que dura una oferta
-    
-    // Porcentajes de fluctuación
-    priceFluctuation: { min: -0.001, max: 0.001 }, // ±0.1% por actualización (antes ±0.2%)
-    indexFluctuation: { min: -0.0005, max: 0.0005 }, // ±0.05% por actualización (antes ±0.1%)
-    
-    // Descuentos
-    discountProbability: 0.02, // Probabilidad de oferta (2%, antes 5%)
-    discountAmount: 0.2, // Descuento en oferta (20% = 0.2)
-    
-    // Crash
-    crashPriceDrop: 0.3, // Caída de precios en crash (30% = 0.3)
-    crashIndexDrop: 0.4, // Caída del índice en crash (40% = 0.4)
-    
-    // Límites
-    minPrice: 2, // Precio mínimo de bebida (€2)
-    minIndex: 500, // Índice mínimo (500)
-    
-    // Rendimiento
-    enableCRT: false // Activar efecto CRT (false para TVs)
+    crashInterval: 300,
+    updateInterval: 1000,
+    discountDuration: 30,
+    priceFluctuation: { min: -0.001, max: 0.001 },
+    indexFluctuation: { min: -0.0005, max: 0.0005 },
+    discountProbability: 0.02,
+    discountAmount: 0.2,
+    crashPriceDrop: 0.3,
+    crashIndexDrop: 0.4,
+    minPrice: 2,
+    minIndex: 500,
+    enableCRT: false
 };
 
 /**
- * Lista de bebidas con precios iniciales, categorías e íconos.
+ * Configuración de Firebase (reemplaza con tus credenciales).
+ */
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAV9R90-9wiGI6TUdxf3rJKer8ul_UnPP4",
+    authDomain: "downjone-sync.firebaseapp.com",
+    databaseURL: "https://downjone-sync-default-rtdb.firebaseio.com",
+    projectId: "downjone-sync",
+    storageBucket: "downjone-sync.firebasestorage.app",
+    messagingSenderId: "306426085063",
+    appId: "1:306426085063:web:cb646bf57d450b22a408e2"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/**
+ * Lista de bebidas.
  */
 const drinks = [
     { id: 1, name: "Mojito", price: 8, popularity: 0, category: "cocktails", prevPrice: 8, discount: false, icon: "icons/mojito.png", discountEnd: 0 },
@@ -114,44 +126,47 @@ const indexChart = new Chart(ctx, {
 });
 
 /**
- * Sincroniza estado con localStorage.
+ * Sincroniza estado con Firebase.
  */
 function syncState() {
+    if (isDrinksOnly) return; // Solo modo Completo escribe
     const state = {
         drinks: drinks.map(d => ({ id: d.id, price: d.price, prevPrice: d.prevPrice, discount: d.discount, popularity: d.popularity, discountEnd: d.discountEnd })),
         index,
         crashTime
     };
-    localStorage.setItem('barDownJonesState', JSON.stringify(state));
+    db.ref('state').set(state).catch(err => console.error('Firebase write error:', err));
 }
 
 /**
- * Carga estado desde localStorage.
+ * Carga estado desde Firebase.
  */
 function loadState() {
-    const state = localStorage.getItem('barDownJonesState');
-    if (state) {
-        const parsed = JSON.parse(state);
-        drinks.forEach(d => {
-            const saved = parsed.drinks.find(s => s.id === d.id);
-            if (saved) {
-                d.price = saved.price;
-                d.prevPrice = saved.prevPrice;
-                d.discount = saved.discount;
-                d.popularity = saved.popularity;
-                d.discountEnd = saved.discountEnd;
-            }
-        });
-        index = parsed.index;
-        crashTime = parsed.crashTime;
-        indexHistory = [index];
-    }
+    db.ref('state').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            drinks.forEach(d => {
+                const saved = data.drinks.find(s => s.id === d.id);
+                if (saved) {
+                    d.price = saved.price;
+                    d.prevPrice = saved.prevPrice;
+                    d.discount = saved.discount;
+                    d.popularity = saved.popularity;
+                    d.discountEnd = saved.discountEnd;
+                }
+            });
+            index = data.index;
+            crashTime = data.crashTime;
+            indexHistory = [index];
+            updateDrinks();
+            updateTicker();
+            if (!isDrinksOnly) updateIndex();
+        }
+    }, (err) => console.error('Firebase read error:', err));
 }
 
 /**
- * Muestra una notificación en pantalla.
- * @param {string} message - Mensaje a mostrar.
- * @param {string} type - Tipo de notificación (info, success, error).
+ * Muestra una notificación.
  */
 function showNotification(message, type = 'info') {
     if (isDrinksOnly) return;
@@ -166,7 +181,7 @@ function showNotification(message, type = 'info') {
 }
 
 /**
- * Actualiza las bebidas en las columnas, reutilizando elementos existentes.
+ * Actualiza las bebidas en las columnas.
  */
 function updateDrinks() {
     drinks.forEach(drink => {
@@ -185,7 +200,6 @@ function updateDrinks() {
         const currentPopularity = drink.popularity;
         const arrowClass = drink.price > drink.prevPrice ? 'arrow-up' : drink.price < drink.prevPrice ? 'arrow-down' : '';
 
-        // Actualizar solo si hay cambios
         if (
             drinkLi.dataset.price !== currentPrice ||
             drinkLi.dataset.discount !== currentDiscount.toString() ||
@@ -208,7 +222,6 @@ function updateDrinks() {
 
 /**
  * Añade una bebida al carrito.
- * @param {number} drinkId - ID de la bebida.
  */
 function addToCart(drinkId) {
     if (isDrinksOnly) return;
@@ -223,13 +236,13 @@ function addToCart(drinkId) {
 }
 
 /**
- * Actualiza el carrito en pantalla.
+ * Actualiza el carrito.
  */
 function updateCart() {
     if (isDrinksOnly) return;
     cartItems.innerHTML = '';
     let total = 0;
-    cart.forEach((item, index) => {
+    cart.forEach((item) => {
         const li = document.createElement('li');
         li.textContent = `${item.name}${item.discount ? ` (Oferta -${config.discountAmount * 100}%)` : ''} - €${item.price.toFixed(2)}`;
         cartItems.appendChild(li);
@@ -239,7 +252,7 @@ function updateCart() {
 }
 
 /**
- * Procesa la compra de bebidas en el carrito.
+ * Procesa la compra.
  */
 buyButton.addEventListener('click', () => {
     if (cart.length === 0) {
@@ -276,7 +289,7 @@ buyButton.addEventListener('click', () => {
 });
 
 /**
- * Actualiza el historial de transacciones.
+ * Actualiza el historial.
  */
 function updateHistory() {
     if (isDrinksOnly) return;
@@ -292,35 +305,31 @@ function updateHistory() {
  * Simula fluctuaciones del mercado.
  */
 function simulateMarket() {
+    if (isDrinksOnly) return;
     const now = Date.now();
     if (now - lastUpdate < config.updateInterval) return;
     lastUpdate = now;
-    const currentTime = Math.floor(now / 1000); // Tiempo en segundos
+    const currentTime = Math.floor(now / 1000);
 
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
         const fluctuation = Math.random() * (config.priceFluctuation.max - config.priceFluctuation.min) + config.priceFluctuation.min;
         drink.price = Math.max(config.minPrice, drink.price * (1 + fluctuation));
 
-        // Gestionar duración de descuentos
         if (drink.discount && currentTime >= drink.discountEnd) {
             drink.discount = false;
             drink.discountEnd = 0;
         } else if (!drink.discount && Math.random() < config.discountProbability) {
             drink.discount = true;
             drink.discountEnd = currentTime + config.discountDuration;
-            if (!isDrinksOnly) {
-                showNotification(`¡Oferta flash en ${drink.name}! -${config.discountAmount * 100}%`, 'info');
-                if (soundEnabled) offerSound.play().catch(() => {});
-            }
+            showNotification(`¡Oferta flash en ${drink.name}! -${config.discountAmount * 100}%`, 'info');
+            if (soundEnabled) offerSound.play().catch(() => {});
         }
     });
 
-    if (!isDrinksOnly) {
-        const indexFluctuation = Math.random() * (config.indexFluctuation.max - config.indexFluctuation.min) + config.indexFluctuation.min;
-        index = Math.max(config.minIndex, index * (1 + indexFluctuation));
-        updateIndex();
-    }
+    const indexFluctuation = Math.random() * (config.indexFluctuation.max - config.indexFluctuation.min) + config.indexFluctuation.min;
+    index = Math.max(config.minIndex, index * (1 + indexFluctuation));
+    updateIndex();
     updateDrinks();
     updateTicker();
     syncState();
@@ -343,6 +352,7 @@ function updateIndex() {
  * Actualiza el temporizador de crash.
  */
 function updateCrashTimer() {
+    if (isDrinksOnly) return;
     crashTime--;
     const minutes = Math.floor(crashTime / 60);
     const seconds = crashTime % 60;
@@ -358,27 +368,26 @@ function updateCrashTimer() {
  * Simula un crash del mercado.
  */
 function crashMarket() {
+    if (isDrinksOnly) return;
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
         drink.price = drink.price * (1 - config.crashPriceDrop);
         drink.discount = false;
         drink.discountEnd = 0;
     });
-    if (!isDrinksOnly) {
-        index *= (1 - config.crashIndexDrop);
-        updateIndex();
-        indexSection.classList.add('crash');
-        setTimeout(() => indexSection.classList.remove('crash'), 3000);
-        if (soundEnabled && crashSound) crashSound.play().catch(() => {});
-        showNotification(`¡Crash! Precios caídos un ${config.crashPriceDrop * 100}%.`, 'error');
-    }
+    index *= (1 - config.crashIndexDrop);
+    updateIndex();
+    indexSection.classList.add('crash');
+    setTimeout(() => indexSection.classList.remove('crash'), 3000);
+    if (soundEnabled && crashSound) crashSound.play().catch(() => {});
+    showNotification(`¡Crash! Precios caídos un ${config.crashPriceDrop * 100}%.`, 'error');
     updateDrinks();
     updateTicker();
     syncState();
 }
 
 /**
- * Actualiza el ticker con precios actuales.
+ * Actualiza el ticker.
  */
 function updateTicker() {
     const currentContent = drinks.map(drink => {
@@ -409,15 +418,12 @@ themeToggle.addEventListener('click', () => {
 });
 
 /**
- * Alterna modo Solo Bebidas/Completo (botón).
+ * Alterna modo Solo Bebidas/Completo.
  */
 modeToggle.addEventListener('click', () => {
     toggleMode();
 });
 
-/**
- * Alterna modo Solo Bebidas/Completo (tecla Ctrl+M).
- */
 document.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.key.toLowerCase() === 'm') {
         event.preventDefault();
@@ -425,9 +431,6 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-/**
- * Alterna modo Solo Bebidas/Completo.
- */
 function toggleMode() {
     isDrinksOnly = !isDrinksOnly;
     document.body.classList.toggle('drinks-only');
@@ -439,7 +442,6 @@ function toggleMode() {
         updateHistory();
         updateIndex();
     }
-    // Pantalla completa automática en modo Solo Bebidas (TV)
     if (isDrinksOnly && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
     }
@@ -487,12 +489,12 @@ exportHistory.addEventListener('click', () => {
  */
 function startMarketSimulation() {
     loadState();
-    updateDrinks();
-    updateTicker();
-    setInterval(simulateMarket, config.updateInterval);
+    if (!isDrinksOnly) {
+        setInterval(simulateMarket, config.updateInterval);
+        setInterval(updateCrashTimer, 1000);
+    }
 }
 
 // Iniciar
 if (config.enableCRT) document.body.classList.add('crt-effect');
 startMarketSimulation();
-setInterval(updateCrashTimer, 1000);
