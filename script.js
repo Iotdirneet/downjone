@@ -17,30 +17,6 @@ const config = {
 };
 
 /**
- * Configuración de Firebase (reemplaza con tus credenciales).
- */
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyAV9R90-9wiGI6TUdxf3rJKer8ul_UnPP4",
-    authDomain: "downjone-sync.firebaseapp.com",
-    databaseURL: "https://downjone-sync-default-rtdb.firebaseio.com",
-    projectId: "downjone-sync",
-    storageBucket: "downjone-sync.firebasestorage.app",
-    messagingSenderId: "306426085063",
-    appId: "1:306426085063:web:cb646bf57d450b22a408e2"
-};
-
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-/**
  * Lista de bebidas.
  */
 const drinks = [
@@ -129,7 +105,7 @@ const indexChart = new Chart(ctx, {
  * Sincroniza estado con Firebase.
  */
 function syncState() {
-    if (isDrinksOnly) return; // Solo modo Completo escribe
+    if (isDrinksOnly) return;
     const state = {
         drinks: drinks.map(d => ({ id: d.id, price: d.price, prevPrice: d.prevPrice, discount: d.discount, popularity: d.popularity, discountEnd: d.discountEnd })),
         index,
@@ -160,7 +136,12 @@ function loadState() {
             indexHistory = [index];
             updateDrinks();
             updateTicker();
-            if (!isDrinksOnly) updateIndex();
+            if (!isDrinksOnly) {
+                updateIndex();
+                const minutes = Math.floor(crashTime / 60);
+                const seconds = crashTime % 60;
+                if (crashTimer) crashTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
         }
     }, (err) => console.error('Firebase read error:', err));
 }

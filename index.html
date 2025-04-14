@@ -6,7 +6,7 @@
     <title>Bar Down Jones - Simulador de Bolsa</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -66,8 +66,21 @@
         }
     </script>
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js';
+        const firebaseConfig = {
+            apiKey: "AIzaSyAV9R90-9wiGI6TUdxf3rJKer8ul_UnPP4",
+            authDomain: "downjone-sync.firebaseapp.com",
+            databaseURL: "https://downjone-sync-default-rtdb.firebaseio.com",
+            projectId: "downjone-sync",
+            storageBucket: "downjone-sync.firebasestorage.app",
+            messagingSenderId: "306426085063",
+            appId: "1:306426085063:web:cb646bf57d450b22a408e2"
+        };
+        const app = initializeApp(firebaseConfig);
+        window.db = getDatabase(app);
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
