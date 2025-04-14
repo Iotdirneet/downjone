@@ -1,6 +1,6 @@
 body {
     font-family: 'Courier New', monospace;
-    background-color: #0d0d0d; /* Más oscuro, como un bar nocturno */
+    background-color: #0d0d0d;
     color: #e0e0e0;
     margin: 0;
     padding: 0;
@@ -8,7 +8,7 @@ body {
 }
 
 body.light-theme {
-    background-color: #f5e6cc; /* Tono cálido inspirado en un bar de día */
+    background-color: #f5e6cc;
     color: #333;
 }
 
@@ -35,24 +35,59 @@ body.light-theme .category h3 {
 }
 
 body.light-theme #buy-button,
-body.light-theme .drink-item button {
+body.light-theme .drink-item button,
+body.light-theme #mode-toggle,
+body.light-theme #theme-toggle {
     background: #d32f2f;
     color: #fff;
 }
 
 body.light-theme #buy-button:hover,
-body.light-theme .drink-item button:hover {
+body.light-theme .drink-item button:hover,
+body.light-theme #mode-toggle:hover,
+body.light-theme #theme-toggle:hover {
     background: #b71c1c;
 }
 
-body.light-theme .ticker {
-    background: #333;
-    border-top-color: #666;
+body.drinks-only .index,
+body.drinks-only .bottom-section,
+body.drinks-only .ticker,
+body.drinks-only .notifications {
+    display: none;
+}
+
+body.drinks-only .controls {
+    display: flex;
+    justify-content: center;
+}
+
+body.drinks-only .controls label,
+body.drinks-only #theme-toggle {
+    display: none;
+}
+
+body.drinks-only .container {
+    padding: 10px;
+}
+
+body.drinks-only .drinks {
+    margin: 0;
+    border: none;
+    background: none;
+    padding: 10px;
+}
+
+body.drinks-only h1 {
+    margin-bottom: 10px;
+}
+
+body.drinks-only .drinks h2 {
+    margin-top: 0;
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     padding: 20px;
     text-align: center;
     padding-bottom: 60px;
@@ -62,7 +97,7 @@ body.light-theme .ticker {
 }
 
 h1 {
-    color: #00ffcc; /* Neón cian para un vibe más bar */
+    color: #00ffcc;
     font-size: 2.8em;
     text-shadow: 0 0 15px #00ffcc, 0 0 30px #00ffcc;
     width: 100%;
@@ -81,8 +116,9 @@ h1 {
     color: #e0e0e0;
 }
 
-#theme-toggle {
-    background: #ff4081; /* Rosa neón */
+#theme-toggle,
+#mode-toggle {
+    background: #ff4081;
     color: #fff;
     border: none;
     padding: 8px 16px;
@@ -90,12 +126,13 @@ h1 {
     cursor: pointer;
 }
 
-#theme-toggle:hover {
+#theme-toggle:hover,
+#mode-toggle:hover {
     background: #f50057;
 }
 
 .index {
-    background: #1c2526; /* Gris-azul oscuro */
+    background: #1c2526;
     border: 1px solid #00ffcc;
     border-radius: 8px;
     padding: 10px;
@@ -130,15 +167,38 @@ h1 {
     margin: 10px 0;
 }
 
-.drinks, .cart, .history {
+.drinks {
     background: #1c2526;
     border: 1px solid #00ffcc;
     border-radius: 8px;
     padding: 20px;
     margin: 20px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.category {
     flex: 1;
     min-width: 300px;
-    margin-left: 20px;
+    padding: 0 10px;
+}
+
+.category:not(:last-child) {
+    border-right: 1px solid #00ffcc;
+}
+
+.category h3 {
+    color: #ff4081;
+    border-bottom: 1px solid #00ffcc;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    font-size: 1.3em;
 }
 
 .drinks-list {
@@ -147,22 +207,15 @@ h1 {
     margin: 0;
 }
 
-.category h3 {
-    color: #ff4081; /* Rosa neón para categorías */
-    border-bottom: 1px solid #00ffcc;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-}
-
 .drink-item {
     background: #263238;
     border-bottom: 1px solid #00ffcc;
-    padding: 12px;
+    padding: 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 5px;
-    font-size: 1.1em; /* Tamaño de fuente más grande */
+    font-size: 0.95em;
 }
 
 .drink-item.discount {
@@ -172,20 +225,31 @@ h1 {
 .drink-item span {
     flex: 1;
     text-align: left;
-    min-width: 100px;
+    min-width: 80px;
 }
 
 .drink-item .name {
     flex: 2;
-    min-width: 180px;
+    min-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drink-item .name .discount-text {
+    display: block;
+    font-size: 0.8em;
+    color: #ff4081;
 }
 
 .drink-item .price {
     min-width: 80px;
+    text-align: center;
 }
 
 .drink-item .popularity {
     min-width: 80px;
+    text-align: center;
 }
 
 .drink-item .price-change {
@@ -214,40 +278,96 @@ h1 {
     background: #00ffcc;
     color: #000;
     border: none;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 5px;
     cursor: pointer;
-    min-width: 100px;
+    min-width: 90px;
+    font-size: 0.9em;
+}
+
+body.drinks-only .drink-item button {
+    display: none;
 }
 
 .drink-item button:hover {
     background: #00e6b3;
 }
 
-.cart ul, .history ul {
-    list-style: none;
-    padding: 0;
+.bottom-section {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 20px;
+    justify-content: center;
 }
 
-.cart li, .history li {
-    background: #263238;
-    margin: 5px 0;
+.cart {
+    background: #1c2526;
+    border: 1px solid #00ffcc;
+    border-radius: 8px;
     padding: 10px;
+    margin: 10px 0;
+    max-width: 300px;
+    flex: 1;
+}
+
+.cart h2 {
+    font-size: 1.2em;
+    margin: 10px 0;
+}
+
+.cart ul {
+    list-style: none;
+    padding: 0;
+    font-size: 0.9em;
+}
+
+.cart li {
+    background: #263238;
+    margin: 3px 0;
+    padding: 8px;
     border-radius: 5px;
+}
+
+.cart p {
+    font-size: 1em;
+    margin: 10px 0;
 }
 
 #buy-button {
     background: #00ffcc;
     color: #000;
     border: none;
-    padding: 10px 20px;
+    padding: 8px 16px;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 1.1em;
+    font-size: 1em;
 }
 
 #buy-button:hover {
     background: #00e6b3;
+}
+
+.history {
+    background: #1c2526;
+    border: 1px solid #00ffcc;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 10px 0;
+    flex: 2;
+    min-width: 300px;
+}
+
+.history ul {
+    list-style: none;
+    padding: 0;
+}
+
+.history li {
+    background: #263238;
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 5px;
 }
 
 .ticker {
@@ -266,7 +386,7 @@ h1 {
 
 #ticker-content {
     display: inline-block;
-    animation: ticker 80s linear infinite; /* Más lento */
+    animation: ticker 80s linear infinite;
 }
 
 .ticker-item {
@@ -290,9 +410,51 @@ h1 {
     font-weight: bold;
 }
 
+#notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+}
+
+.notification {
+    background: #263238;
+    color: #e0e0e0;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out, slideOut 0.3s ease-in 2.7s;
+    max-width: 300px;
+    font-size: 0.9em;
+}
+
+.notification.success {
+    border-left: 4px solid #00ffcc;
+}
+
+.notification.error {
+    border-left: 4px solid #ff4081;
+}
+
+.notification.info {
+    border-left: 4px solid #e0e0e0;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
 @media (max-width: 600px) {
     .container {
         flex-direction: column;
+        padding: 10px;
     }
 
     .index {
@@ -300,9 +462,29 @@ h1 {
         margin: 10px 0;
     }
 
-    .drinks, .cart, .history {
-        margin-left: 0;
-        width: 100%;
+    .drinks {
+        margin: 10px 0;
+    }
+
+    .categories {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .category {
+        min-width: 100%;
+        padding: 0;
+        border-right: none;
+    }
+
+    .bottom-section {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .cart, .history {
+        max-width: 100%;
+        margin: 10px 0;
     }
 
     .ticker {
@@ -313,8 +495,8 @@ h1 {
     .drink-item {
         flex-wrap: wrap;
         gap: 8px;
-        font-size: 1em;
-        padding: 10px;
+        font-size: 0.9em;
+        padding: 8px;
     }
 
     .drink-item span {
@@ -327,14 +509,30 @@ h1 {
         min-width: 120px;
     }
 
+    .drink-item .price,
+    .drink-item .popularity {
+        min-width: 60px;
+    }
+
     .drink-item button {
         width: 100%;
         margin-top: 8px;
-        padding: 10px;
+        padding: 8px;
     }
 
     .controls {
         flex-direction: column;
         gap: 10px;
+    }
+
+    #notifications {
+        top: 10px;
+        right: 10px;
+        width: 90%;
+    }
+
+    .notification {
+        font-size: 0.8em;
+        padding: 10px 15px;
     }
 }
