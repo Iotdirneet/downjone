@@ -2,22 +2,22 @@
  * Configuración centralizada de parámetros para Bar Down Jones.
  */
 const config = {
-    crashInterval: 300,
-    updateInterval: 1000,
-    discountDuration: 30,
+    crashInterval: 300, // 5 min
+    updateInterval: 1000, // 1s
+    discountDuration: 30, // 30s
     priceFluctuation: { min: -0.001, max: 0.001 },
     indexFluctuation: { min: -0.0005, max: 0.0005 },
-    discountProbability: 0.02,
-    discountAmount: 0.2,
-    crashPriceDrop: 0.3,
-    crashIndexDrop: 0.4,
+    discountProbability: 0.02, // 2%
+    discountAmount: 0.2, // 20%
+    crashPriceDrop: 0.3, // 30%
+    crashIndexDrop: 0.4, // 40%
     minPrice: 2,
     minIndex: 500,
     enableCRT: false
 };
 
 /**
- * Lista de bebidas.
+ * Lista de bebidas con íconos.
  */
 const drinks = [
     { id: 1, name: "Mojito", price: 8, popularity: 0, category: "cocktails", prevPrice: 8, discount: false, icon: "icons/mojito.png", discountEnd: 0 },
@@ -102,59 +102,47 @@ const indexChart = ctx ? new Chart(ctx, {
 }) : null;
 
 /**
- * Sincroniza estado con Firebase.
+ * Sincroniza estado con localStorage.
  */
 function syncState() {
-    if (isDrinksOnly) return;
+    console.log('Sincronizando estado');
     const state = {
         drinks: drinks.map(d => ({ id: d.id, price: d.price, prevPrice: d.prevPrice, discount: d.discount, popularity: d.popularity, discountEnd: d.discountEnd })),
         index,
         crashTime
     };
-    console.log('Sincronizando estado:', state);
-    db.ref('state').set(state)
-        .then(() => console.log('Estado sincronizado'))
-        .catch(err => console.error('Firebase write error:', err));
+    localStorage.setItem('downJonesState', JSON.stringify(state));
 }
 
 /**
- * Carga estado desde Firebase.
+ * Carga estado desde localStorage.
  */
 function loadState() {
-    console.log('Iniciando loadState');
-    db.ref('state').on('value', (snapshot) => {
-        const data = snapshot.val();
-        console.log('Firebase snapshot:', data);
-        if (data && data.drinks) {
-            drinks.forEach(d => {
-                const saved = data.drinks.find(s => s.id === d.id);
-                if (saved) {
-                    d.price = saved.price;
-                    d.prevPrice = saved.prevPrice;
-                    d.discount = saved.discount;
-                    d.popularity = saved.popularity;
-                    d.discountEnd = saved.discountEnd;
-                }
-            });
-            index = data.index || 1000;
-            crashTime = data.crashTime || config.crashInterval;
-            indexHistory = [index];
-            updateDrinks();
-            updateTicker();
-            if (!isDrinksOnly) {
-                updateIndex();
-                const minutes = Math.floor(crashTime / 60);
-                const seconds = crashTime % 60;
-                if (crashTimer) crashTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    console.log('Cargando estado');
+    const saved = localStorage.getItem('downJonesState');
+    if (saved) {
+        const data = JSON.parse(saved);
+        drinks.forEach(d => {
+            const savedDrink = data.drinks.find(s => s.id === d.id);
+            if (savedDrink) {
+                d.price = savedDrink.price;
+                d.prevPrice = savedDrink.prevPrice;
+                d.discount = savedDrink.discount;
+                d.popularity = savedDrink.popularity;
+                d.discountEnd = savedDrink.discountEnd;
             }
-        } else {
-            console.warn('No hay datos en Firebase, usando datos locales');
-            updateDrinks();
-            updateTicker();
-            if (!isDrinksOnly) updateIndex();
-            syncState();
-        }
-    }, (err) => console.error('Firebase read error:', err));
+        });
+        index = data.index || 1000;
+        crashTime = data.crashTime || config.crashInterval;
+        indexHistory = [index];
+    }
+    updateDrinks();
+    updateTicker();
+    if (!isDrinksOnly) {
+        updateIndex();
+        updateCart();
+        updateHistory();
+    }
 }
 
 /**
@@ -176,7 +164,7 @@ function showNotification(message, type = 'info') {
  * Actualiza las bebidas en las columnas.
  */
 function updateDrinks() {
-    console.log('Ejecutando updateDrinks');
+    console.log('Actualizando bebidas');
     if (!cocktailsList || !beersList || !nonAlcoholicList) {
         console.error('Listas de bebidas no encontradas');
         return;
@@ -204,7 +192,7 @@ function updateDrinks() {
         ) {
             drinkLi.classList.toggle('discount', drink.discount);
             drinkLi.innerHTML = `
-                <span class="name"><img src="${drink.icon}" class="drink-icon" alt="${drink.name}">${drink.name}${drink.discount ? `<span class="discount-text"> (Oferta -${config.discountAmount * 100}%)</span>` : ''}</span>
+                <span class="name"><img src="${drink.icon}" class="drink-icon" alt="${drink.name}" onerror="this.style.display='none'">${drink.name}${drink.discount ? `<span class="discount-text"> (Oferta -${config.discountAmount * 100}%)</span>` : ''}</span>
                 <span class="price">€${currentPrice}</span>
                 <span class="popularity">${drink.popularity}</span>
                 <span class="price-change ${arrowClass}"></span>
@@ -304,7 +292,6 @@ function updateHistory() {
  * Simula fluctuaciones del mercado.
  */
 function simulateMarket() {
-    if (isDrinksOnly) return;
     const now = Date.now();
     if (now - lastUpdate < config.updateInterval) return;
     lastUpdate = now;
@@ -324,7 +311,7 @@ function simulateMarket() {
             drink.discountEnd = currentTime + config.discountDuration;
             showNotification(`¡Oferta flash en ${drink.name}! -${config.discountAmount * 100}%`, 'info');
             if (soundEnabled && offerSound) {
-                offerSound.play().then(() => console.log('Oferta sonido reproducido')).catch(err => console.error('Oferta sonido error:', err));
+                offerSound.play().catch(err => console.error('Oferta sonido error:', err));
             }
         }
     });
@@ -348,14 +335,13 @@ function updateIndex() {
     indexChart.data.labels = Array(indexHistory.length).fill('').map((_, i) => i);
     indexChart.data.datasets[0].data = indexHistory;
     indexChart.update();
-    console.log('Índice actualizado:', index);
+    console.log('Índice:', index);
 }
 
 /**
  * Actualiza el temporizador de crash.
  */
 function updateCrashTimer() {
-    if (isDrinksOnly) return;
     crashTime--;
     const minutes = Math.floor(crashTime / 60);
     const seconds = crashTime % 60;
@@ -371,8 +357,7 @@ function updateCrashTimer() {
  * Simula un crash del mercado.
  */
 function crashMarket() {
-    if (isDrinksOnly) return;
-    console.log('Ejecutando crash');
+    console.log('Crash ejecutado');
     drinks.forEach(drink => {
         drink.prevPrice = drink.price;
         drink.price = drink.price * (1 - config.crashPriceDrop);
@@ -384,7 +369,7 @@ function crashMarket() {
     if (indexSection) indexSection.classList.add('crash');
     setTimeout(() => indexSection && indexSection.classList.remove('crash'), 3000);
     if (soundEnabled && crashSound) {
-        crashSound.play().then(() => console.log('Crash sonido reproducido')).catch(err => console.error('Crash sonido error:', err));
+        crashSound.play().catch(err => console.error('Crash sonido error:', err));
     }
     showNotification(`¡Crash! Precios caídos un ${config.crashPriceDrop * 100}%.`, 'error');
     updateDrinks();
@@ -516,7 +501,7 @@ if (exportHistory) {
  */
 function startMarketSimulation() {
     console.log('Iniciando simulación');
-    // Renderizar inmediatamente
+    loadState();
     updateDrinks();
     updateTicker();
     if (!isDrinksOnly) {
@@ -524,9 +509,6 @@ function startMarketSimulation() {
         updateCart();
         updateHistory();
     }
-    // Iniciar Firebase
-    loadState();
-    // Actualizar dinámicamente
     setInterval(() => {
         updateDrinks();
         updateTicker();
@@ -537,8 +519,15 @@ function startMarketSimulation() {
     }, config.updateInterval);
 }
 
+/**
+ * Escuchar cambios en localStorage para sincronización.
+ */
+window.addEventListener('storage', () => {
+    console.log('Cambio en localStorage detectado');
+    loadState();
+});
+
 // Iniciar
-if (config.enableCRT) document.body.classList.add('crt-effect');
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM cargado, iniciando app');
     startMarketSimulation();
