@@ -191,8 +191,10 @@ function simulateMarket() {
             showNotification(`¡Oferta flash en ${drink.name}! -20%`, 'info');
         }
     });
-    index = Math.max(500, index * (1 + (Math.random() * 0.02 - 0.01)));
-    updateIndex();
+    if (!isDrinksOnly) {
+        index = Math.max(500, index * (1 + (Math.random() * 0.02 - 0.01)));
+        updateIndex();
+    }
     displayDrinks();
     updateTicker();
 }
@@ -227,16 +229,16 @@ function crashMarket() {
         drink.price = drink.price * 0.7;
         drink.discount = false;
     });
-    index *= 0.6;
-    updateIndex();
-    displayDrinks();
-    updateTicker();
     if (!isDrinksOnly) {
+        index *= 0.6;
+        updateIndex();
         indexSection.classList.add('crash');
         setTimeout(() => indexSection.classList.remove('crash'), 3000);
         if (soundEnabled && crashSound) crashSound.play().catch(() => {});
         showNotification('¡Crash! Precios caídos un 30%.', 'error');
     }
+    displayDrinks();
+    updateTicker();
 }
 
 // Actualizar ticker
