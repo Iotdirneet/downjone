@@ -51,7 +51,6 @@ body.light-theme #theme-toggle:hover {
 
 body.drinks-only .index,
 body.drinks-only .bottom-section,
-body.drinks-only .ticker,
 body.drinks-only .notifications {
     display: none;
 }
@@ -220,6 +219,12 @@ h1 {
 
 .drink-item.discount {
     background: linear-gradient(90deg, #ff4081, #263238);
+    animation: blinkOffer 1.5s ease-in-out infinite;
+}
+
+@keyframes blinkOffer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 .drink-item span {

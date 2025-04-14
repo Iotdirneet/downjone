@@ -105,7 +105,8 @@ function displayDrinks() {
         `;
         if (drink.category === 'cocktails') cocktailsList.appendChild(drinkLi);
         else if (drink.category === 'beers') beersList.appendChild(drinkLi);
-        else nonAlcoholicList.appenddoors);
+        else nonAlcoholicList.appendChild(drinkLi);
+    });
 }
 
 // Añadir al carrito
@@ -240,7 +241,6 @@ function crashMarket() {
 
 // Actualizar ticker
 function updateTicker() {
-    if (isDrinksOnly) return;
     tickerContent.innerHTML = '';
     drinks.forEach(drink => {
         const span = document.createElement('span');
@@ -265,19 +265,32 @@ themeToggle.addEventListener('click', () => {
     indexChart.update();
 });
 
-// Alternar modo
+// Alternar modo (botón)
 modeToggle.addEventListener('click', () => {
+    toggleMode();
+});
+
+// Alternar modo (tecla secreta Ctrl+M)
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.key.toLowerCase() === 'm') {
+        event.preventDefault(); // Evitar acciones por defecto del navegador
+        toggleMode();
+    }
+});
+
+// Función para alternar modo
+function toggleMode() {
     isDrinksOnly = !isDrinksOnly;
     document.body.classList.toggle('drinks-only');
     modeToggle.textContent = isDrinksOnly ? 'Modo Completo' : 'Modo Solo Bebidas';
     displayDrinks();
+    updateTicker();
     if (!isDrinksOnly) {
         updateCart();
         updateHistory();
         updateIndex();
-        updateTicker();
     }
-});
+}
 
 // Iniciar
 displayDrinks();
